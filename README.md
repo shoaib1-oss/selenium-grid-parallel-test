@@ -24,34 +24,101 @@ project-root/
 ```
 
 ---
+ Step 1: Install Docker
+Make sure Docker is installed on your system.
 
-## 🐳 Selenium Grid Setup (Using Docker)
+Check with:
 
-1. **Install Docker**:
+bash
+Copy
+Edit
+docker --version
+If not installed, install it first from: https://docs.docker.com/get-docker/
 
-```bash
-sudo apt update
-sudo apt install -y docker.io
-sudo systemctl start docker
-sudo systemctl enable docker
-```
+🔹 Step 2: Create a Docker Network
+Create a Docker network to allow containers to communicate easily.
 
-2. **Set up the Hub**:
+bash
+Copy
+Edit
+docker network create selenium-grid
+🔹 Step 3: Start the Selenium Hub
+Hub is the brain of the grid. It accepts test requests and sends them to nodes.
 
-```bash
-docker run -d -p 4444:4444 --name selenium-hub selenium/hub
-```
+bash
+Copy
+Edit
+docker run -d --net selenium-grid --name selenium-hub \
+  -p 4442:4442 -p 4443:4443 -p 4444:4444 \
+  selenium/hub:4.21.0
+✅ Visit this URL in your browser to confirm it's running:
+http://localhost:4444
 
-3. **Add Two Chrome Nodes**:
+🔹 Step 4: Start Chrome Node
+This node will run Chrome browser instances.
 
-```bash
-docker run -d --name chrome1 --link selenium-hub:hub selenium/node-chrome
+bash
+Copy
+Edit
+docker run -d --net selenium-grid --name chrome-node \
+  -e SE_EVENT_BUS_HOST=selenium-hub \
+  -e SE_EVENT_BUS_PUBLISH_PORT=4442 \
+  -e SE_EVENT_BUS_SUBSCRIBE_PORT=4443 \
+  -p 5900:5900 \
+  selenium/node-chrome:4.21.0
+🔹 Step 5: (Optional) Start Firefox Node
+You can also run Firefox if needed:
 
-docker run -d --name chrome2 --link selenium-hub:hub selenium/node-chrome
-```
+bash
+Copy
+Edit
+docker run -d --net selenium-grid --name firefox-node \
+  -e SE_EVENT_BUS_HOST=selenium-hub \
+  -e SE_EVENT_BUS_PUBLISH_PORT=4442 \
+  -e SE_EVENT_BUS_SUBSCRIBE_PORT=4443 \
+  -p 5901:5900 \
+  selenium/node-firefox:4.21.0
+🔹 Step 6: Verify Grid Status
+Go to:
+http://localhost:4444/grid/status
+You should see both Chrome and Firefox nodes registered.
 
-4. **Verify Grid is Running**:
-   Open your browser and go to: `http://<your-public-ip>:4444`
+🔹 Step 7: Run a Selenium Test (Sample Python)
+Install Selenium in Python (if needed):
+
+bash
+Copy
+Edit
+pip install selenium
+Run this test:
+
+python
+Copy
+Edit
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+
+driver = webdriver.Remote(
+    command_executor="http://localhost:4444/wd/hub",
+    desired_capabilities=DesiredCapabilities.CHROME
+)
+
+driver.get("https://www.google.com")
+print(driver.title)
+driver.quit()
+✅ This will open Chrome inside the Docker container.
+
+🔹 Step 8: Watch the Browser via VNC (Optional)
+Use a VNC viewer like RealVNC:
+
+Host: localhost
+
+Port: 5900 (Chrome) or 5901 (Firefox)
+
+Password: secret (default for Selenium images)
+
+
 
 ---
 
